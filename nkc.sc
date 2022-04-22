@@ -48,6 +48,7 @@ module :=
             # vvv print-pass
             qq
                 [fn] [name] ([handle-sym] [application])
+                    [dump] [handle-sym]
                     [let] [ctx-sym] = ([nkc-raw.nkc_get_ctx] [handle-sym])
                     # (print "inside generated ui function")
 
@@ -57,11 +58,16 @@ module :=
                         [if] ([and] (e.type == [nkc-raw.NKC_EWINDOW]) (e.window.param == [nkc-raw.NKC_EQUIT]))
                             (print "attempting to stop main loop")
                             [nkc-raw.nkc_stop_main_loop] [handle-sym]
+                            [return]
                     unquote-splice body...
                     [nkc-raw.nkc_render] [handle-sym] ([rgb] 40 40 40)
 
         inline start (app ui title w h flags)
             local nkcx = (nkc)
+            dump nkcx
+            dump &nkcx
+            print nkcx.nkcInited
+            print &nkcx
             local arg = (tupleof &nkcx app)
             if (!= (nkc-raw.nkc_init &nkcx title w h flags) null)
                 print "successful init, starting main loop"
@@ -70,9 +76,11 @@ module :=
                     if (!= nkcx.keepRunning 0)
                         ui &nkcx app
                     else
-                        break
+                        print "breaking loop"
+                        break;
                 # nkc-raw.nkc_set_main_loop &nkcx ui (&arg as voidstar)
             nkc-raw.nkc_shutdown &nkcx
+            print "ran shutdown"
         nkc_init := nkc-raw.nkc_init
 
         locals;
