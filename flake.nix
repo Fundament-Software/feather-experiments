@@ -28,10 +28,16 @@
             version = "1.0";
             src = nuklear-cross;
 
-            dontBuild = true;
+            buildInputs = [ pkgs.glew pkgs.glfw ];
+
+            outputs = [ "out" "static" ];
+            buildPhase = ''
+              gcc -c -o nkc.o -D NKC_USE_OPENGL=3 -D NKCD=NKC_GLFW nuklear_cross.c
+            '';
             installPhase = ''
               mkdir -p $out/include
               cp -r nkc_frontend nuklear_drivers nuklear.h nuklear_cross.h stb_image.h $out/include
+              cp nkc.o $static
             '';
           };
           experiment = pkgs.stdenv.mkDerivation rec {
@@ -45,8 +51,20 @@
               selfpkgs.nkc
               pkgs.glew
               pkgs.glfw
+              pkgs.libglvnd
               # pkgs.glibc
             ];
+
+            buildPhase = ''
+              SCOPES_CACHE=$(pwd)/scopes-cache scopes build.sc
+              gcc -o main main.o ${selfpkgs.nkc.static} -lglfw -lGLEW -lm -lGL
+            '';
+
+            installPhase = ''
+              mkdir -p $out/bin
+              install main $out/bin/experiment
+
+            '';
 
             LD_LIBRARY_PATH = pkgs.lib.concatMapStringsSep ":"
               (lib: "${pkgs.lib.getLib lib}/lib") buildInputs;
