@@ -1,6 +1,7 @@
 
 
 import .nkc-raw
+import C.stdio
 
 let handle-sym = (Symbol "#nuklear-handle")
 let ctx-sym = (Symbol "#nuklear-context")
@@ -26,6 +27,7 @@ module :=
         context := nkc-raw.nk_context
 
         text := (genwrapper nkc-raw.nk_label)
+        layout-row-dynamic := (genwrapper nkc-raw.nk_layout_row_dynamic)
 
         recti := nkc-raw.nk_recti
         rectf := nkc-raw.nk_rectf
@@ -34,6 +36,12 @@ module :=
 
         WIN_NORMAL := nkc-raw.NKC_WIN_NORMAL
         TEXT_LEFT := nkc-raw.NK_TEXT_LEFT
+
+        sugar button-label (text body...)
+            qq
+                [embed]
+                    [if] ([nkc-raw.nk_button_label] [ctx-sym] [text])
+                        unquote-splice body...
 
         sugar window (name rect flags body...)
             # print "in window" name
@@ -56,7 +64,7 @@ module :=
 
                     [embed]
                         [if] ([and] (e.type == [nkc-raw.NKC_EWINDOW]) (e.window.param == [nkc-raw.NKC_EQUIT]))
-                            (print "attempting to stop main loop")
+                            ([C.stdio.printf] "attempting to stop main loop\n")
                             [nkc-raw.nkc_stop_main_loop] [handle-sym]
                             [return]
                     unquote-splice body...
@@ -64,23 +72,19 @@ module :=
 
         inline start (app ui title w h flags)
             local nkcx = (nkc)
-            dump nkcx
-            dump &nkcx
-            print nkcx.nkcInited
-            print &nkcx
             local arg = (tupleof &nkcx app)
             if (!= (nkc-raw.nkc_init &nkcx title w h flags) null)
-                print "successful init, starting main loop"
+                C.stdio.printf "successful init, starting main loop\n"
                 nkcx.keepRunning = true;
                 loop ()
                     if (!= nkcx.keepRunning 0)
                         ui &nkcx app
                     else
-                        print "breaking loop"
+                        C.stdio.printf "breaking loop\n"
                         break;
                 # nkc-raw.nkc_set_main_loop &nkcx ui (&arg as voidstar)
             nkc-raw.nkc_shutdown &nkcx
-            print "ran shutdown"
+            C.stdio.printf "ran shutdown\n"
         nkc_init := nkc-raw.nkc_init
 
         locals;
