@@ -4,11 +4,11 @@ using import C.stdio
 
 
 ui main-ui (state)
-    window "test window" (rectf 50 50 220 220) 0
+    window "test window" (rect 50 50 220 220) (make-panel-flags BORDER MOVABLE SCALABLE)
         layout-row-dynamic 30 1
-        text "Some sample text." TEXT_LEFT
-        text "Some other text." TEXT_LEFT
-        button-label "test button"
+        show "Some sample text." TEXT_LEFT
+        show "Some other text." TEXT_LEFT
+        button ("test button")
             printf "the button was pressed\n"
 
 fn main()

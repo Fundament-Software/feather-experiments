@@ -25,19 +25,19 @@ do
     using module.union filter extern-pattern
     let nkc = module.struct.nkc
 
-    # nk_rect.__typecall =
-    #     spice "__typecall" (cls args...)
-    #         spice-match args...
-    #         case (x : f32, y : f32, w : f32, h : f32)
-    #             `(module.extern.nk_rect x y w h)
-    #         case (x : i32, y : i32, w : i32, h : i32)
-    #             `(module.extern.nk_recti x y w h)
-    #         case (pos : nk_vec2, size : nk_vec2)
-    #             `(module.extern.nk_recta pos size)
-    #         # case (xywh : (@ f32))
-    #         #     module.extern.nk_rectv xywh
-    #         default
-    #             error "attempted to construct a rectangle with unexpected arguments"
+    type+ nk_rect
+        inline... __typecall
+        case (cls, x : f32, y : f32, w : f32, h : f32)
+            module.extern.nk_rect x y w h
+        case (cls, x : i32, y : i32, w : i32, h : i32)
+            module.extern.nk_recti x y w h
+        case (cls, pos : nk_vec2, size : nk_vec2)
+            module.extern.nk_recta pos size
+        case (cls, xywh : (@ f32))
+            module.extern.nk_rectv xywh
+
+    nk_image_show := module.extern.nk_image
+    nk_text := module.extern.nk_text
 
     nk_rectf := module.extern.nk_rect
 
