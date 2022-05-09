@@ -57,7 +57,7 @@
 
             buildPhase = ''
               SCOPES_CACHE=$(pwd)/scopes-cache scopes smoke-test/build.sc
-              gcc -o main main.o ${selfpkgs.nkc.static} -lglfw -lGLEW -lm -lGL
+              gcc -o main smoke-test/main.o ${selfpkgs.nkc.static} -lglfw -lGLEW -lm -lGL
             '';
 
             installPhase = ''

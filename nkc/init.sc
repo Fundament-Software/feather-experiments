@@ -3,7 +3,6 @@
 import .nkc-raw
 import C.stdio
 using import itertools
-using import String
 using import spicetools
 
 let handle-sym = (Symbol "#nuklear-handle")
@@ -159,10 +158,10 @@ module :=
         show :=
             genwrapper
                 fn... "show"
-                case (ctx : (mutable@ context), str : String, align : u32) (nkc-raw.nk_text ctx str (i32 (countof str)) align)
-                case (ctx : (mutable@ context), str : String) (this-function ctx str TEXT_LEFT)
-                case (ctx : (mutable@ context), str : String, align : u32, col : color) (nkc-raw.nk_text_colored ctx str (i32 (countof str)) align col)
-                case (ctx : (mutable@ context), str : String, col : color) (this-function ctx str TEXT_LEFT col)
+                case (ctx : (mutable@ context), str : (zarray i8), align : u32) (nkc-raw.nk_text ctx str (i32 (countof str)) align)
+                case (ctx : (mutable@ context), str : (zarray i8)) (this-function ctx str TEXT_LEFT)
+                case (ctx : (mutable@ context), str : (zarray i8), align : u32, col : color) (nkc-raw.nk_text_colored ctx str (i32 (countof str)) align col)
+                case (ctx : (mutable@ context), str : (zarray i8), col : color) (this-function ctx str TEXT_LEFT col)
                 case (ctx : (mutable@ context), img : image) (nkc-raw.nk_image_show ctx img)
 
         wrap-fns
@@ -233,13 +232,13 @@ module :=
         tree-push :=
             genwrapper
                 fn... "tree-push"
-                case (ctx : (mutable@ context), treetype : bool, title : String, state : bool)
+                case (ctx : (mutable@ context), treetype : bool, title : (zarray i8), state : bool)
 
 
 
 
         fn... button-any-raw
-        case (ctx, str : String)
+        case (ctx, str : (zarray i8))
             nkc-raw.nk_button_text ctx str ((countof str) as i32)
         case (ctx, col : color)
             nkc-raw.nk_button_label ctx col
@@ -247,19 +246,19 @@ module :=
             nkc-raw.nk_button_symbol ctx sym
         case (ctx, img : image)
             nkc-raw.nk_button_image ctx img
-        case (ctx, sym : nkc-raw.nk_symbol_type, str : String, align : u32)
+        case (ctx, sym : nkc-raw.nk_symbol_type, str : (zarray i8), align : u32)
             nkc-raw.nk_button_symbol_text ctx sym str ((countof str) as i32) align
-        case (ctx, img : image, str : String, align : u32)
+        case (ctx, img : image, str : (zarray i8), align : u32)
             nkc-raw.nk_button_image_text ctx img str ((countof str) as i32) align
-        case (ctx, style : (@ nkc-raw.nk_style_button), str : String, align)
+        case (ctx, style : (@ nkc-raw.nk_style_button), str : (zarray i8), align)
             nkc-raw.nk_button_text_styled ctx style str ((countof str) as i32)
         case (ctx, style : (@ nkc-raw.nk_style_button), sym : nkc-raw.nk_symbol_type)
             nkc-raw.nk_button_symbol_styled ctx style sym
         case (ctx, style : (@ nkc-raw.nk_style_button), img : image)
             nkc-raw.nk_button_image_styled ctx style img
-        case (ctx, style : (@ nkc-raw.nk_style_button), sym : nkc-raw.nk_symbol_type, str : String, align : u32)
+        case (ctx, style : (@ nkc-raw.nk_style_button), sym : nkc-raw.nk_symbol_type, str : (zarray i8), align : u32)
             nkc-raw.nk_button_symbol_text_styled ctx style sym str ((countof str) as i32) align
-        case (ctx, style : (@ nkc-raw.nk_style_button), img : image, str : String, align : u32)
+        case (ctx, style : (@ nkc-raw.nk_style_button), img : image, str : (zarray i8), align : u32)
             nkc-raw.nk_button_image_text_styled ctx style img str ((countof str) as i32) align
 
         button-any := (genwrapper button-any-raw)
@@ -301,9 +300,9 @@ module :=
         contextual-item :=
             genwrapper
                 fn... "contextual-item"
-                case (ctx : (@ context), str : String, align : u32) (nkc-raw.nk_contextual_item_text ctx str (countof str) align)
-                case (ctx : (@ context), img : image, str : String, align : u32) (nkc-raw.nk_contextual_item_image_text ctx img str (countof str) align)
-                case (ctx : (@ context), sym : nkc-raw.nk_symbol_type, str : String, align : u32) (nkc-raw.nk_contextual_item_symbol_text ctx sym str (countof str) align)
+                case (ctx : (@ context), str : (zarray i8), align : u32) (nkc-raw.nk_contextual_item_text ctx str (countof str) align)
+                case (ctx : (@ context), img : image, str : (zarray i8), align : u32) (nkc-raw.nk_contextual_item_image_text ctx img str (countof str) align)
+                case (ctx : (@ context), sym : nkc-raw.nk_symbol_type, str : (zarray i8), align : u32) (nkc-raw.nk_contextual_item_symbol_text ctx sym str (countof str) align)
         contextual-close := (genwrapper nkc-raw.nk_contextual_close)
         sugar contextual (flags size bounds body...)
             qq
