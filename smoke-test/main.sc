@@ -1,5 +1,5 @@
 
-using import .nkc
+using import ..nkc
 using import C.stdio
 
 

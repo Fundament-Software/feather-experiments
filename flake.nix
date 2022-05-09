@@ -40,7 +40,7 @@
               cp nkc.o $static
             '';
           };
-          experiment = pkgs.stdenv.mkDerivation rec {
+          smoke-test = pkgs.stdenv.mkDerivation rec {
             pname = "experiment";
             version = "0.0";
             src = ./.;
@@ -56,13 +56,13 @@
             ];
 
             buildPhase = ''
-              SCOPES_CACHE=$(pwd)/scopes-cache scopes build.sc
+              SCOPES_CACHE=$(pwd)/scopes-cache scopes smoke-test/build.sc
               gcc -o main main.o ${selfpkgs.nkc.static} -lglfw -lGLEW -lm -lGL
             '';
 
             installPhase = ''
               mkdir -p $out/bin
-              install main $out/bin/experiment
+              install main $out/bin/smoke-test
 
             '';
 
@@ -72,10 +72,10 @@
         });
 
       defaultPackage =
-        forAllSystems (system: self.packages.${system}.experiment);
+        forAllSystems (system: self.packages.${system}.smoke-test);
 
       devShell = forAllSystems (system:
-        self.packages.${system}.experiment.overrideAttrs (old: {
+        self.packages.${system}.smoke-test.overrideAttrs (old: {
           buildInputs = old.buildInputs ++ [ nixpkgsFor.${system}.gdb ];
         }));
 

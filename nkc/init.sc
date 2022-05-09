@@ -79,6 +79,14 @@ sugar wrap-consts (syms...)
                         qq [val]
                 'cons-sink '()
 
+spice FILE_LINE ()
+    let line = (sc_anchor_lineno ('anchor args))
+    let path = (sc_anchor_path ('anchor args))
+    let loc = (.. (tostring path) ":" (tostring line))
+    `loc
+spice LINE ()
+    let line = (sc_anchor_lineno ('anchor args))
+    `line
 
 run-stage;
 
@@ -178,6 +186,57 @@ module :=
             button-set-behavior
             button-push-behavior
             button-pop-behavior
+
+        let symbol = nkc-raw.nk_symbol_type
+        # todo, make these fields of the symbol type
+        wrap-consts
+            SYMBOL_NONE
+            SYMBOL_X
+            SYMBOL_UNDERSCORE
+            SYMBOL_CIRCLE_SOLID
+            SYMBOL_CIRCLE_OUTLINE
+            SYMBOL_RECT_SOLID
+            SYMBOL_RECT_OUTLINE
+            SYMBOL_TRIANGLE_UP
+            SYMBOL_TRIANGLE_DOWN
+            SYMBOL_TRIANGLE_LEFT
+            SYMBOL_TRIANGLE_RIGHT
+            SYMBOL_PLUS
+            SYMBOL_MINUS
+            SYMBOL_MAX
+
+        sugar tree ((treetype title state id...) body...)
+            let idargs =
+                sugar-match id...
+                case ()
+                    qq [FILE_LINE] ([countof] [FILE_LINE]) [LINE]
+                case (id)
+                    qq [FILE_LINE] ([countof] [FILE_LINE]) [LINE]
+                case (buff len)
+                    qq [buff] [len] [LINE]
+                case (buff len seed)
+                    qq [buff] [len] [seed]
+                default
+                    error "invalid syntax; tree-push must recieve between three and six arguments"
+            let treeflag =
+                if (treetype == 'node)
+                    qq [nkc-raw.NK_TREE_NODE]
+                elseif (treetype == 'tab)
+                    qq [nkc-raw.NK_TREE_TAB]
+                else
+                    error "the tree type must be either node or tab"
+            qq
+                [embed]
+                    [if] ([nkc-raw.nk_tree_push_hashed] [ctx-sym] [treeflag] [title] [state] (unquote-splice idargs))
+                        unquote-splice body...
+                        [nkc-raw.nk_tree_pop] [ctx-sym]
+        tree-push :=
+            genwrapper
+                fn... "tree-push"
+                case (ctx : (mutable@ context), treetype : bool, title : String, state : bool)
+
+
+
 
         fn... button-any-raw
         case (ctx, str : String)
