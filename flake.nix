@@ -1,5 +1,5 @@
 {
-  description = "A very basic flake";
+  description = "Experiments in building feather related things";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-21.11";
@@ -41,7 +41,7 @@
             '';
           };
           smoke-test = pkgs.stdenv.mkDerivation rec {
-            pname = "experiment";
+            pname = "smoke-test";
             version = "0.0";
             src = ./.;
 

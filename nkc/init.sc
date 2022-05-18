@@ -4,6 +4,7 @@ import .nkc-raw
 import C.stdio
 using import itertools
 using import spicetools
+using import String
 
 let handle-sym = (Symbol "#nuklear-handle")
 let ctx-sym = (Symbol "#nuklear-context")
@@ -16,8 +17,35 @@ inline print-pass (x)
 inline genwrapper (func)
     sugar wrapper (args...)
         # vvv print-pass
-        qq [func] [ctx-sym]
-            unquote-splice args...
+        # try
+            qq [func] [ctx-sym]
+                unquote-splice args...
+        # else
+            error
+                ..
+                    "error expanding genwrapper for "
+                    tostring func
+
+            _;
+        let scope = sugar-scope
+        try
+            let ctx = ('@ scope ctx-sym)
+            # if (('typeof ctx) != (mutable@ nkc-raw.nk_context))
+            #     error
+            #         ..
+            #             "nuklear wrapper called in scope with the wrong type of context, expected\n"
+            #             tostring (mutable@ nkc-raw.nk_context)
+            #             "\nbut got\n"
+            #             tostring ('typeof ctx)
+
+            qq [func] [ctx-sym]
+                unquote-splice args...
+        except (exc)
+            error@+ exc unknown-anchor
+                ..
+                    "while expanding wrapper for\n"
+                    tostring func
+
 
 fn underscorify (prefix sym)
     let name = (sym as Symbol as string)
@@ -78,13 +106,27 @@ sugar wrap-consts (syms...)
                         qq [val]
                 'cons-sink '()
 
-spice FILE_LINE ()
-    let line = (sc_anchor_lineno ('anchor args))
-    let path = (sc_anchor_path ('anchor args))
+sugar wrapped-inline (name (args...) body...)
+    let declaration? = (('typeof name) == Symbol)
+    if declaration?
+        qq
+            [let] [name] =
+                [genwrapper]
+                    [inline] [name] ([ctx-sym] (unquote-splice args...))
+                        unquote-splice body...
+    else
+        qq
+            [genwrapper]
+                [inline] [name] ([ctx-sym] (unquote-splice args...))
+                    unquote-splice body...
+
+inline file-line-of (arg)
+    let line = (sc_anchor_lineno ('anchor arg))
+    let path = (sc_anchor_path ('anchor arg))
     let loc = (.. (tostring path) ":" (tostring line))
     `loc
-spice LINE ()
-    let line = (sc_anchor_lineno ('anchor args))
+inline line-of (arg)
+    let line = (sc_anchor_lineno ('anchor arg))
     `line
 
 run-stage;
@@ -162,6 +204,14 @@ module :=
                 case (ctx : (mutable@ context), str : (zarray i8)) (this-function ctx str TEXT_LEFT)
                 case (ctx : (mutable@ context), str : (zarray i8), align : u32, col : color) (nkc-raw.nk_text_colored ctx str (i32 (countof str)) align col)
                 case (ctx : (mutable@ context), str : (zarray i8), col : color) (this-function ctx str TEXT_LEFT col)
+                case (ctx : (mutable@ context), str : String, align : u32) (nkc-raw.nk_text ctx str (i32 (countof str)) align)
+                case (ctx : (mutable@ context), str : String) (this-function ctx str TEXT_LEFT)
+                case (ctx : (mutable@ context), str : String, align : u32, col : color) (nkc-raw.nk_text_colored ctx str (i32 (countof str)) align col)
+                case (ctx : (mutable@ context), str : String, col : color) (this-function ctx str TEXT_LEFT col)
+                case (ctx : (mutable@ context), str : string, align : u32) (nkc-raw.nk_text ctx str (i32 (countof str)) align)
+                case (ctx : (mutable@ context), str : string) (this-function ctx str TEXT_LEFT)
+                case (ctx : (mutable@ context), str : string, align : u32, col : color) (nkc-raw.nk_text_colored ctx str (i32 (countof str)) align col)
+                case (ctx : (mutable@ context), str : string, col : color) (this-function ctx str TEXT_LEFT col)
                 case (ctx : (mutable@ context), img : image) (nkc-raw.nk_image_show ctx img)
 
         wrap-fns
@@ -204,15 +254,24 @@ module :=
             SYMBOL_MINUS
             SYMBOL_MAX
 
+        collapse-state := nkc-raw.nk_collapse_states
+        type+ collapse-state
+            inline... __typecall
+            case (cls)
+                nkc-raw.NK_MINIMIZED
+            case (cls, val : bool)
+                ? val nkc-raw.NK_MAXIMIZED nkc-raw.NK_MINIMIZED
+
+
         sugar tree ((treetype title state id...) body...)
             let idargs =
                 sugar-match id...
                 case ()
-                    qq [FILE_LINE] ([countof] [FILE_LINE]) [LINE]
+                    qq [(file-line-of treetype)] ([countof] [(file-line-of treetype)]) [(line-of treetype)]
                 case (id)
-                    qq [FILE_LINE] ([countof] [FILE_LINE]) [LINE]
+                    qq [(file-line-of treetype)] ([countof] [(file-line-of treetype)]) [id]
                 case (buff len)
-                    qq [buff] [len] [LINE]
+                    qq [buff] [len] [sc_anchor_lineno ('anchor treetype)]
                 case (buff len seed)
                     qq [buff] [len] [seed]
                 default
@@ -224,9 +283,14 @@ module :=
                     qq [nkc-raw.NK_TREE_TAB]
                 else
                     error "the tree type must be either node or tab"
+            inline... tree_push
+            case (ctx : (mutable@ context), tree-type : nkc-raw.nk_tree_type, title, state : bool, id...)
+                nkc-raw.nk_tree_push_hashed ctx tree-type title (? state nkc-raw.NK_MAXIMIZED nkc-raw.NK_MINIMIZED) id...
+            case (ctx : (mutable@ context), tree-type : nkc-raw.nk_tree_type, title, state : nkc-raw.nk_collapse_states, id...)
+                nkc-raw.nk_tree_state_push ctx tree-type title &state
             qq
                 [embed]
-                    [if] ([nkc-raw.nk_tree_push_hashed] [ctx-sym] [treeflag] [title] [state] (unquote-splice idargs))
+                    [if] ([tree_push] [ctx-sym] [treeflag] [title] [state] (unquote-splice idargs))
                         unquote-splice body...
                         [nkc-raw.nk_tree_pop] [ctx-sym]
         tree-push :=
@@ -313,9 +377,9 @@ module :=
         sugar layout-row-template (height body...)
             qq
                 [do]
-                    [let] push-dynamic = [genwrapper nkc-raw.nk_layout_row_template_push_dynamic]
-                    [let] push-static = [genwrapper nkc-raw.nk_layout_row_template_push_static]
-                    [let] push-variable = [genwrapper nkc-raw.nk_layout_row_template_push_variable]
+                    [let] push-dynamic = [(genwrapper nkc-raw.nk_layout_row_template_push_dynamic)]
+                    [let] push-static = [(genwrapper nkc-raw.nk_layout_row_template_push_static)]
+                    [let] push-variable = [(genwrapper nkc-raw.nk_layout_row_template_push_variable)]
                     [nkc-raw.nk_layout_row_template_begin] [ctx-sym] [height]
                     unquote-splice body...
                     [nkc-raw.nk_layout_row_template_end] [ctx-sym]
@@ -383,9 +447,58 @@ module :=
                     unquote-splice body...
                     [nkc-raw.nkc_render] [handle-sym] ([rgb] 40 40 40)
 
+        sugar template (name (args...) body...)
+            let declaration? = (('typeof name) == Symbol)
+            let text-name =
+                if declaration?
+                    name as Symbol as string
+                else
+                    name as string
+            # let fngen =
+            #     qq
+            #         [fn] [text-name] ([ctx-sym] (unquote-splice args...))
+            #             unquote-splice body...
+
+            # vvv print-pass
+            # if declaration?
+            #     qq ([let] [name] = ([genwrapper] [fngen]))
+            # else
+            #     qq ([genwrapper] [fngen])
+
+            # vvv print-pass
+            # qq
+            #     [inline] [name] ((unquote-splice args...))
+            #         unquote-splice body...
+
+            vvv print-pass
+            qq
+                [wrapped-inline] [name] ((unquote-splice args...))
+                    unquote-splice body...
+
+        sugar subui (name (args...) body...)
+            qq
+                [fn] [name] ([ctx-sym] (unquote-splice args...))
+                    unquote-splice body...
+        sugar subui-method (name (self args...) body...)
+            qq
+                [fn] [name] ([self] [ctx-sym] (unquote-splice args...))
+                    unquote-splice body...
+        sugar call-subui (f args...)
+            spice invoke-subui (f ctx args...)
+                if (('typeof f) == Symbol)
+                    spice-match args...
+                    case (obj rest...)
+                        `(f obj ctx rest...)
+                    default
+                        error "subui method call must have an object"
+                else
+                    `(f ctx args...)
+            qq
+                [invoke-subui] [f] [ctx-sym] (unquote-splice args...)
+
         inline start (app ui title w h flags)
             local nkcx = (nkc)
-            local arg = (tupleof &nkcx app)
+            # local arg = (tupleof &nkcx app)
             if (!= (nkc-raw.nkc_init &nkcx title w h flags) null)
                 C.stdio.printf "successful init, starting main loop\n"
                 nkcx.keepRunning = true;
