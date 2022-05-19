@@ -54,7 +54,7 @@ fn main ()
                             "(print \"hello world\")"
                 ins =
                     inspector
-                        val = (fn (foo bar) (+ foo 1 bar))
+                        val = ((Array i32) 1 2 3)
 
     print app.nb.cells
     let cellref = (@ app.nb.cells 0)
