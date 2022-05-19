@@ -17,6 +17,7 @@
 
     in {
 
+      # todo: make the notebook have a runnable packaging
       packages = forAllSystems (system:
         let
           pkgs = nixpkgsFor.${system};
@@ -70,6 +71,10 @@
               (lib: "${pkgs.lib.getLib lib}/lib") buildInputs;
           };
         });
+
+      # todo: make a check that renders a UI to a texture and compares it to a sample.
+      checks = forAllSystems
+        (system: { build-smoke-test = self.packages.${system}.smoke-test; });
 
       defaultPackage =
         forAllSystems (system: self.packages.${system}.smoke-test);
